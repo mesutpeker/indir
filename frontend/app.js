@@ -54,7 +54,7 @@
     if (host === "localhost" || host === "127.0.0.1") {
       return "http://localhost:8000";
     }
-    return "https://api-indir.mesutpeker.com";
+    return "https://mesut-video-api.onrender.com";
   }
 
   function normalizeBaseUrl(rawUrl) {
@@ -406,7 +406,7 @@
   // Application State & DOM Elements
   // ---------------------------------------------------------------------------
   const state = {
-    apiUrl: normalizeBaseUrl(safeStorageGet(STORAGE_KEYS.apiUrl)) || defaultApiUrl(),
+    apiUrl: (() => { const saved = normalizeBaseUrl(safeStorageGet(STORAGE_KEYS.apiUrl)); return !saved || saved === "https://api-indir.mesutpeker.com" ? defaultApiUrl() : saved; })(),
     apiKey: (safeStorageGet(STORAGE_KEYS.apiKey) || "").trim(),
     activeJobId: null,
     pollTimerId: null,
@@ -547,7 +547,7 @@
       });
     } catch {
       throw new Error(
-        `Sunucuya ulaşılamadı (${base}). Backend ve Cloudflare Tunnel'ın çalıştığından emin olun.`
+        `Sunucuya ulaşılamadı (${base}). Bulut sunucu uykudan uyanıyorsa 30–50 sn bekleyip tekrar deneyin.`
       );
     }
 
@@ -880,7 +880,7 @@
     const apiUrl = els.authApiUrl.value.trim();
     const apiKey = els.authApiKey.value.trim();
     els.authSubmitBtn.disabled = true;
-    els.authSubmitBtn.textContent = "Doğrulanıyor...";
+    els.authSubmitBtn.textContent = "Bağlanıyor (ilk uyanış ~40 sn sürebilir)...";
 
     try {
       await verifyCredentials(apiUrl, apiKey);
