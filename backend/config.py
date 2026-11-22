@@ -9,6 +9,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 
 DEFAULT_ALLOWED_ORIGINS = (
+    "https://mesutpeker.com,"
     "https://indir.mesutpeker.com,"
     "https://mesutpeker.github.io,"
     "http://localhost:5500,"
