@@ -1,14 +1,28 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEYS = {
-    apiUrl: "vd_api_url",
-    apiKey: "vd_api_key",
-    history: "vd_history",
-    colorScheme: "color-scheme",
-  };
-
-  const MAX_HISTORY_ITEMS = 20;
+  function purgeBrowserStorage() {
+    try {
+      ["vd_api_url", "vd_api_key", "vd_history", "color-scheme"].forEach((key) => {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+      });
+    } catch {
+      // Ignore storage errors
+    }
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((regs) => Promise.all(regs.map((reg) => reg.unregister())))
+        .catch(() => {});
+    }
+    if ("caches" in window) {
+      caches
+        .keys()
+        .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+        .catch(() => {});
+    }
+  }
 
   const PLATFORM_RULES = [
     { id: "youtube", hosts: ["youtube.com", "youtu.be", "youtube-nocookie.com"] },
@@ -24,30 +38,6 @@
     facebook: "Facebook",
     other: "Diğer",
   };
-
-  function safeStorageGet(key) {
-    try {
-      return localStorage.getItem(key);
-    } catch {
-      return null;
-    }
-  }
-
-  function safeStorageSet(key, value) {
-    try {
-      localStorage.setItem(key, value);
-    } catch {
-      // Ignore storage quota or restricted-mode errors
-    }
-  }
-
-  function safeStorageRemove(key) {
-    try {
-      localStorage.removeItem(key);
-    } catch {
-      // Ignore storage errors
-    }
-  }
 
   function defaultApiUrl() {
     const host = window.location.hostname;
@@ -146,8 +136,7 @@
   }
 
   function syncThemeUI() {
-    const stored = safeStorageGet(STORAGE_KEYS.colorScheme);
-    const activeMode = stored === "light" || stored === "dark" ? stored : "system";
+    const activeMode = state.themeMode === "light" || state.themeMode === "dark" ? state.themeMode : "system";
     if (colorSchemeMeta) {
       colorSchemeMeta.content = activeMode === "system" ? "light dark" : activeMode;
     }
@@ -158,11 +147,7 @@
   }
 
   function applyThemeSelection(mode) {
-    if (mode === "light" || mode === "dark") {
-      safeStorageSet(STORAGE_KEYS.colorScheme, mode);
-    } else {
-      safeStorageRemove(STORAGE_KEYS.colorScheme);
-    }
+    state.themeMode = mode === "light" || mode === "dark" ? mode : "system";
     syncThemeUI();
   }
 
@@ -174,16 +159,9 @@
     });
   });
 
-  // Never erase a stored override on system change; only refresh the label text
   if (typeof systemDarkMedia.addEventListener === "function") {
     systemDarkMedia.addEventListener("change", updateSystemThemeLabel);
   }
-
-  window.addEventListener("storage", (event) => {
-    if (event.key === STORAGE_KEYS.colorScheme) {
-      syncThemeUI();
-    }
-  });
 
   // ---------------------------------------------------------------------------
   // Top-Layer Dialog Exit & Light-Dismiss Fallback
@@ -406,8 +384,9 @@
   // Application State & DOM Elements
   // ---------------------------------------------------------------------------
   const state = {
-    apiUrl: (() => { const saved = normalizeBaseUrl(safeStorageGet(STORAGE_KEYS.apiUrl)); return !saved || saved === "https://api-indir.mesutpeker.com" ? defaultApiUrl() : saved; })(),
-    apiKey: (safeStorageGet(STORAGE_KEYS.apiKey) || "").trim(),
+    apiUrl: defaultApiUrl(),
+    apiKey: "",
+    themeMode: "system",
     activeJobId: null,
     pollTimerId: null,
     isBusy: false,
@@ -456,11 +435,6 @@
     readyFilename: document.getElementById("ready-filename"),
     readyFilesize: document.getElementById("ready-filesize"),
     saveFileLink: document.getElementById("save-file-link"),
-    dismissReadyBtn: document.getElementById("dismiss-ready-btn"),
-
-    historyEmpty: document.getElementById("history-empty"),
-    historyList: document.getElementById("history-list"),
-    clearHistoryBtn: document.getElementById("clear-history-btn"),
     footerEngineInfo: document.getElementById("footer-engine-info"),
 
     settingsDialog: document.getElementById("settings-dialog"),
@@ -596,12 +570,6 @@
     const info = await apiRequest("/api/auth/verify", { apiUrl, apiKey: cleanedKey });
     state.apiUrl = normalizeBaseUrl(apiUrl);
     state.apiKey = cleanedKey;
-    safeStorageSet(STORAGE_KEYS.apiUrl, state.apiUrl);
-    if (state.apiKey) {
-      safeStorageSet(STORAGE_KEYS.apiKey, state.apiKey);
-    } else {
-      safeStorageRemove(STORAGE_KEYS.apiKey);
-    }
     els.disconnectBtn.hidden = !state.apiKey;
     updateServerMetadata(info);
     setConnectionStatus("online", "Hazır");
@@ -665,110 +633,15 @@
     els.saveFileLink.href = "#";
   }
 
-  function triggerBrowserSave(downloadUrl, filename) {
-    const link = document.createElement("a");
-    link.href = downloadUrl;
-    if (filename) {
-      link.download = filename;
-    }
-    link.rel = "noopener";
-    link.style.display = "none";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  }
-
-  function loadHistory() {
-    try {
-      const raw = safeStorageGet(STORAGE_KEYS.history);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  }
-
-  function saveHistory(items) {
-    safeStorageSet(STORAGE_KEYS.history, JSON.stringify(items.slice(0, MAX_HISTORY_ITEMS)));
-  }
-
-  function addHistoryEntry(entry) {
-    const items = loadHistory().filter((item) => item.url !== entry.url || item.preset !== entry.preset);
-    items.unshift({
-      title: String(entry.title || "Video"),
-      url: sanitizeHttpUrl(entry.url) || "",
-      platformLabel: String(entry.platformLabel || "Video"),
-      preset: String(entry.preset || "best_mp4"),
-      filesize: typeof entry.filesize === "number" ? entry.filesize : null,
-      at: Date.now(),
-    });
-    saveHistory(items);
-    renderHistory();
-  }
-
-  function renderHistory() {
-    const items = loadHistory();
-    els.historyList.replaceChildren();
-
-    if (items.length === 0) {
-      els.historyEmpty.hidden = false;
-      els.historyList.hidden = true;
-      els.clearHistoryBtn.hidden = true;
-      return;
-    }
-
-    els.historyEmpty.hidden = true;
-    els.historyList.hidden = false;
-    els.clearHistoryBtn.hidden = false;
-
-    for (const item of items) {
-      const li = document.createElement("li");
-      li.className = "history-item";
-
-      const infoDiv = document.createElement("div");
-      infoDiv.className = "history-info";
-
-      const titleSpan = document.createElement("span");
-      titleSpan.className = "history-title";
-      titleSpan.textContent = item.title;
-
-      const subSpan = document.createElement("span");
-      subSpan.className = "history-sub";
-      const sizeStr = formatBytes(item.filesize);
-      const dateStr = new Date(item.at).toLocaleString("tr-TR", {
-        day: "2-digit",
-        month: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      subSpan.textContent = [item.platformLabel, item.preset, sizeStr, dateStr]
-        .filter(Boolean)
-        .join(" · ");
-
-      infoDiv.append(titleSpan, subSpan);
-
-      const actionsDiv = document.createElement("div");
-      actionsDiv.className = "history-actions";
-
-      const reuseBtn = document.createElement("button");
-      reuseBtn.type = "button";
-      reuseBtn.className = "btn btn-secondary btn-sm";
-      reuseBtn.textContent = "Yükle";
-      reuseBtn.addEventListener("click", () => {
-        if (!item.url) return;
-        els.videoUrl.value = item.url;
-        els.clearBtn.hidden = false;
-        updatePlatformChips(item.url);
-        const radio = document.querySelector(`input[name="preset"][value="${CSS.escape(item.preset)}"]`);
-        if (radio) radio.checked = true;
-        els.videoUrl.focus();
-      });
-
-      actionsDiv.append(reuseBtn);
-      li.append(infoDiv, actionsDiv);
-      els.historyList.append(li);
-    }
+  function resetPageState() {
+    els.downloadForm.reset();
+    els.videoUrl.value = "";
+    els.clearBtn.hidden = true;
+    updatePlatformChips("");
+    renderPreview(null);
+    resetJobCard();
+    setFormBusy(false);
+    setBanner(els.actionFeedback, "");
   }
 
   function renderJobSnapshot(job) {
@@ -809,8 +682,8 @@
     if (job.status === "ready") {
       stopPolling();
       setFormBusy(false);
-      els.jobStatusTitle.textContent = "İndirmeye hazır!";
-      els.jobDetailText.textContent = "Tarayıcı indirmesi tetiklendi; başlamazsa aşağıdaki düğmeye dokunun.";
+      els.jobStatusTitle.textContent = "İndirmeye hazır";
+      els.jobDetailText.textContent = "Dosyayı almak için aşağıdaki İndir butonuna basın.";
       els.cancelJobBtn.hidden = true;
 
       const fileUrl = `${state.apiUrl}/api/jobs/${encodeURIComponent(job.id)}/file?token=${encodeURIComponent(
@@ -821,16 +694,6 @@
       els.saveFileLink.href = fileUrl;
       els.saveFileLink.download = job.filename || "video.mp4";
       els.readyBox.hidden = false;
-
-      addHistoryEntry({
-        title: job.title || job.filename,
-        url: els.videoUrl.value.trim(),
-        platformLabel: job.platform_label || PLATFORM_LABELS[job.platform],
-        preset: job.preset,
-        filesize: job.filesize,
-      });
-
-      triggerBrowserSave(fileUrl, job.filename);
       return;
     }
 
@@ -995,7 +858,7 @@
       }
       setBanner(els.actionFeedback, err.message, "error");
     } finally {
-      els.downloadBtn.textContent = "Videoyu Hazırla & İndir";
+      els.downloadBtn.textContent = "Videoyu Hazırla";
     }
   });
 
@@ -1011,20 +874,33 @@
     }
   });
 
-  els.dismissReadyBtn.addEventListener("click", async () => {
-    const jobId = state.activeJobId;
-    resetJobCard();
-    if (!jobId) return;
-    try {
-      await apiRequest(`/api/jobs/${encodeURIComponent(jobId)}`, { method: "DELETE" });
-    } catch {
-      // Ignore cleanup errors
-    }
+  els.saveFileLink.addEventListener("click", () => {
+    state.activeJobId = null;
+    els.jobStatusTitle.textContent = "İndirme başlatıldı";
+    els.jobDetailText.textContent = "Dosya cihazınıza aktarılıyor ve ardından sunucudan otomatik silinecek.";
+    setTimeout(() => {
+      els.readyBox.hidden = true;
+    }, 1200);
   });
 
-  els.clearHistoryBtn.addEventListener("click", () => {
-    safeStorageRemove(STORAGE_KEYS.history);
-    renderHistory();
+  window.addEventListener("pagehide", () => {
+    const jobId = state.activeJobId;
+    if (!jobId) return;
+    state.activeJobId = null;
+    stopPolling();
+    const headers = {};
+    if (state.apiKey) headers["X-API-Key"] = state.apiKey;
+    fetch(`${state.apiUrl}/api/jobs/${encodeURIComponent(jobId)}`, {
+      method: "DELETE",
+      headers,
+      keepalive: true,
+      mode: "cors",
+      credentials: "omit",
+    }).catch(() => {});
+  });
+
+  window.addEventListener("pageshow", () => {
+    resetPageState();
   });
 
   // Settings modal handlers
@@ -1064,7 +940,6 @@
 
   els.disconnectBtn.addEventListener("click", async () => {
     resetJobCard();
-    safeStorageRemove(STORAGE_KEYS.apiKey);
     state.apiKey = "";
     els.settingsApiKey.value = "";
     els.disconnectBtn.hidden = true;
@@ -1082,17 +957,10 @@
   // Bootstrap
   // ---------------------------------------------------------------------------
   async function boot() {
+    purgeBrowserStorage();
     syncThemeUI();
     initFormValidationA11y();
-    renderHistory();
-
-    if ("serviceWorker" in navigator) {
-      const isLocal =
-        window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-      if (window.location.protocol === "https:" || isLocal) {
-        navigator.serviceWorker.register("./sw.js").catch(() => {});
-      }
-    }
+    resetPageState();
 
     showAppScreen();
     try {

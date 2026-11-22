@@ -13,7 +13,7 @@ services:
       - key: ALLOWED_ORIGINS
         value: https://mesutpeker.com,https://indir.mesutpeker.com,https://mesutpeker.github.io
       - key: FILE_TTL_SECONDS
-        value: "900"
+        value: "180"
       - key: MAX_CONCURRENT_JOBS
         value: "2"
       - key: MAX_FILESIZE_MB

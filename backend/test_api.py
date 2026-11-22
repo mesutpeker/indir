@@ -194,6 +194,44 @@ class ApiLifecycleTests(unittest.TestCase):
             self.assertIn("%C3%96rnek", cd)
 
             job_dir = self.download_dir / job_id
+            self.assertFalse(job_dir.exists())
+
+            again = self.client.get(f"/api/jobs/{job_id}/file?token={token}")
+            self.assertEqual(again.status_code, 404)
+
+    def test_delete_job_cleans_up_before_download(self) -> None:
+        sample_bytes = b"TEMP-MP4"
+
+        def fake_download(url, preset, job_dir, settings, progress_cb, cancel_event=None):
+            job_dir.mkdir(parents=True, exist_ok=True)
+            out_file = job_dir / "temp.mp4"
+            out_file.write_bytes(sample_bytes)
+            return {
+                "filepath": out_file,
+                "filename": "temp.mp4",
+                "filesize": len(sample_bytes),
+                "title": "temp",
+            }
+
+        with patch("app.download_video", side_effect=fake_download):
+            create_resp = self.client.post(
+                "/api/jobs",
+                headers={"X-API-Key": TEST_API_KEY},
+                json={"url": "https://x.com/user/status/999", "preset": "best_mp4"},
+            )
+            self.assertEqual(create_resp.status_code, 202)
+            job_id = create_resp.json()["id"]
+
+            for _ in range(30):
+                snap = self.client.get(
+                    f"/api/jobs/{job_id}",
+                    headers={"X-API-Key": TEST_API_KEY},
+                ).json()
+                if snap["status"] == "ready":
+                    break
+                time.sleep(0.05)
+
+            job_dir = self.download_dir / job_id
             self.assertTrue(job_dir.is_dir())
 
             del_resp = self.client.delete(

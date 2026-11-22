@@ -4,11 +4,6 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
-  <script>
-    try {
-      document.querySelector('meta[name="color-scheme"]').content = localStorage.getItem("color-scheme") ?? "light dark";
-    } catch {}
-  </script>
   <meta name="theme-color" content="#4338ca">
   <meta name="robots" content="noindex, nofollow">
   <title>Mesut Video İndir</title>
@@ -141,7 +136,7 @@
 
           <h2 id="downloader-heading" class="visually-hidden">Video Bağlantısı ve İndirme</h2>
 
-          <form id="download-form" class="stack-form" novalidate>
+          <form id="download-form" class="stack-form" autocomplete="off" novalidate>
             <div class="field">
               <label for="video-url">Video Bağlantısı</label>
               <span id="video-url-hint" class="hint">
@@ -225,7 +220,7 @@
                 Önizle
               </button>
               <button id="download-btn" type="submit" class="btn btn-primary">
-                Videoyu Hazırla &amp; İndir
+                Videoyu Hazırla
               </button>
             </div>
 
@@ -279,31 +274,15 @@
             </div>
             <div class="ready-actions">
               <a id="save-file-link" class="btn btn-success btn-lg" href="#" download>
-                Cihaza Kaydet
+                İndir
               </a>
-              <button id="dismiss-ready-btn" type="button" class="btn btn-secondary">
-                Sunucudan Sil
-              </button>
             </div>
             <p class="ready-note">
-              Dosya güvenliğiniz için en fazla 15 dakika sonra sunucudan otomatik olarak silinir.
+              İndir butonuna bastığınızda dosya cihazınıza iner ve sunucudan anında silinir.
             </p>
           </div>
         </section>
 
-        <!-- Local Download History -->
-        <section id="history-section" class="card history-card" aria-labelledby="history-heading">
-          <div class="history-header">
-            <h2 id="history-heading">Son İndirmeler</h2>
-            <button id="clear-history-btn" type="button" class="btn btn-ghost btn-sm" hidden>
-              Temizle
-            </button>
-          </div>
-          <p id="history-empty" class="history-empty">
-            Bu cihazda henüz indirme kaydı yok. Geçmiş yalnızca tarayıcınızda saklanır.
-          </p>
-          <ul id="history-list" class="history-list" hidden></ul>
-        </section>
       </div>
     </main>
 

@@ -76,7 +76,7 @@ class Settings:
     api_key: str
     allowed_origins: list[str] = field(default_factory=lambda: _parse_origins(None))
     download_dir: Path = field(default_factory=lambda: BASE_DIR / "downloads")
-    file_ttl_seconds: int = 900
+    file_ttl_seconds: int = 180
     max_concurrent_jobs: int = 2
     max_filesize_mb: int = 1024
     cookies_file: str | None = None
@@ -142,7 +142,7 @@ class Settings:
             api_key=api_key,
             allowed_origins=_parse_origins(os.environ.get("ALLOWED_ORIGINS")),
             download_dir=download_dir,
-            file_ttl_seconds=_parse_int(os.environ.get("FILE_TTL_SECONDS"), 900, minimum=60),
+            file_ttl_seconds=_parse_int(os.environ.get("FILE_TTL_SECONDS"), 180, minimum=60),
             max_concurrent_jobs=_parse_int(os.environ.get("MAX_CONCURRENT_JOBS"), 2, minimum=1),
             max_filesize_mb=_parse_int(os.environ.get("MAX_FILESIZE_MB"), 1024, minimum=0),
             cookies_file=cookies_file,

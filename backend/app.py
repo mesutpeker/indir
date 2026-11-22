@@ -22,6 +22,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+from starlette.background import BackgroundTask
 
 from config import Settings
 from downloader import (
@@ -223,7 +224,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         async def cleanup_loop() -> None:
             while not stop_event.is_set():
                 try:
-                    await asyncio.wait_for(stop_event.wait(), timeout=60.0)
+                    await asyncio.wait_for(stop_event.wait(), timeout=30.0)
                 except asyncio.TimeoutError:
                     store.cleanup_expired()
 
@@ -461,6 +462,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             path=record.filepath,
             media_type="application/octet-stream",
             headers=headers,
+            background=BackgroundTask(store.delete, job_id),
         )
 
     @app.delete("/api/jobs/{job_id}", dependencies=[Depends(verify_api_key)])
