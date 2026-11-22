@@ -1,0 +1,37 @@
+services:
+  downloader:
+    build: .
+    container_name: mesut-video-downloader
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DOWNLOAD_DIR=/app/downloads
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./downloads:/app/downloads
+      # Opsiyonel cookies.txt kullanacaksaniz asagidaki satiri acin:
+      # - ./cookies.txt:/app/cookies.txt:ro
+
+  # Cloudflare Tunnel (7/24 bulut / ev sunucusu kullanimi icin)
+  # Calistirmak icin: docker compose --profile tunnel up -d
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: mesut-video-cloudflared
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    depends_on:
+      - downloader
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+
+  # Opsiyonel YouTube PO Token yan servisi (VPS/bulut IP'lerinde YouTube bot engeli icin)
+  # Calistirmak icin: .env icinde PO_TOKEN_BASE_URL=http://pot-provider:4416 acip
+  # docker compose --profile tunnel --profile pot up -d
+  pot-provider:
+    image: brainicism/bgutil-ytdlp-pot-provider:latest
+    container_name: mesut-video-pot-provider
+    profiles: ["pot"]
+    restart: unless-stopped

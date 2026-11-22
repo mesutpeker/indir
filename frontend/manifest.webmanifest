@@ -1,0 +1,19 @@
+{
+  "name": "Mesut Video İndir",
+  "short_name": "Video İndir",
+  "description": "YouTube, X (Twitter), Instagram ve Facebook için kişisel video indirici.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#4338ca",
+  "lang": "tr",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

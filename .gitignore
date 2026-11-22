@@ -1,0 +1,19 @@
+# Secrets & environment
+backend/.env
+backend/cookies.txt
+*.env
+
+# Runtime downloads & caches
+backend/downloads/
+backend/__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+
+# OS & editor files
+.DS_Store
+Thumbs.db
