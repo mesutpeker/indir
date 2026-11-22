@@ -54,6 +54,7 @@ class ApiLifecycleTests(unittest.TestCase):
         self.download_dir = Path(self.tmp_dir.name) / "downloads"
         self.settings = Settings(
             api_key=TEST_API_KEY,
+            require_api_key=True,
             allowed_origins=["https://indir.mesutpeker.com"],
             download_dir=self.download_dir,
             file_ttl_seconds=300,
@@ -201,6 +202,26 @@ class ApiLifecycleTests(unittest.TestCase):
             )
             self.assertEqual(del_resp.status_code, 200)
             self.assertFalse(job_dir.exists())
+
+
+class PasswordlessModeTests(unittest.TestCase):
+    def test_passwordless_mode_allows_requests_without_key(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_name:
+            settings = Settings(
+                api_key="unused",
+                require_api_key=False,
+                allowed_origins=["https://mesutpeker.com"],
+                download_dir=Path(tmp_name) / "downloads",
+            )
+            with TestClient(app_module.create_app(settings)) as client:
+                health = client.get("/api/health")
+                self.assertEqual(health.status_code, 200)
+                self.assertFalse(health.json()["auth_required"])
+
+                verify = client.get("/api/auth/verify")
+                self.assertEqual(verify.status_code, 200)
+                self.assertTrue(verify.json()["ok"])
+                self.assertFalse(verify.json()["auth_required"])
 
 
 if __name__ == "__main__":

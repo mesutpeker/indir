@@ -82,6 +82,7 @@ class Settings:
     cookies_file: str | None = None
     cookies_from_browser: str | None = None
     po_token_base_url: str | None = None
+    require_api_key: bool = False
     allow_all_domains: bool = False
     host: str = "127.0.0.1"
     port: int = 8000
@@ -91,14 +92,19 @@ class Settings:
         cls,
         env_path: Path | None = None,
         *,
-        require_api_key: bool = True,
+        require_api_key: bool | None = None,
     ) -> "Settings":
         """Build Settings from environment variables and an optional .env file."""
         target_env = env_path if env_path is not None else BASE_DIR / ".env"
         load_dotenv_file(target_env)
 
+        enforce_key = (
+            _parse_bool(os.environ.get("REQUIRE_API_KEY"), False)
+            if require_api_key is None
+            else bool(require_api_key)
+        )
         api_key = os.environ.get("API_KEY", "").strip()
-        if require_api_key and not api_key:
+        if enforce_key and not api_key:
             raise RuntimeError(
                 "API_KEY ortam degiskeni tanimli degil. "
                 "Lutfen backend/.env dosyasini olusturun veya API_KEY degerini ayarlayin."
@@ -142,6 +148,7 @@ class Settings:
             cookies_file=cookies_file,
             cookies_from_browser=cookies_from_browser,
             po_token_base_url=po_token_base_url,
+            require_api_key=enforce_key,
             allow_all_domains=_parse_bool(os.environ.get("ALLOW_ALL_DOMAINS"), False),
             host=os.environ.get("HOST", "127.0.0.1").strip() or "127.0.0.1",
             port=_parse_int(os.environ.get("PORT"), 8000, minimum=1),

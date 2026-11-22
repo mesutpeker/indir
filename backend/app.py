@@ -204,13 +204,13 @@ def _build_content_disposition(filename: str) -> str:
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Create and configure a FastAPI application instance."""
-    active_settings = settings if settings is not None else Settings.from_env(require_api_key=True)
+    active_settings = settings if settings is not None else Settings.from_env()
     store = JobStore(active_settings.download_dir, active_settings.file_ttl_seconds)
     executor = ThreadPoolExecutor(max_workers=active_settings.max_concurrent_jobs)
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
-        if not active_settings.api_key:
+        if active_settings.require_api_key and not active_settings.api_key:
             raise RuntimeError(
                 "API_KEY ortam değişkeni tanımlı değil. "
                 "Lütfen backend/.env dosyasını oluşturun veya API_KEY değerini ayarlayın."
@@ -257,6 +257,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     def verify_api_key(x_api_key: str | None = Header(default=None, alias="X-API-Key")) -> None:
+        if not active_settings.require_api_key:
+            return
         if not active_settings.api_key:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -341,6 +343,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def health() -> dict[str, Any]:
         return {
             "status": "ok",
+            "auth_required": active_settings.require_api_key,
             "yt_dlp_version": yt_dlp.version.__version__,
             "ffmpeg": bool(find_ffmpeg()),
             "js_runtimes": list(detect_js_runtimes().keys()),
@@ -350,6 +353,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def auth_verify() -> dict[str, Any]:
         return {
             "ok": True,
+            "auth_required": active_settings.require_api_key,
             "yt_dlp_version": yt_dlp.version.__version__,
             "ffmpeg": bool(find_ffmpeg()),
             "js_runtimes": list(detect_js_runtimes().keys()),
@@ -469,4 +473,4 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     return app
 
 
-app = create_app(Settings.from_env(require_api_key=False))
+app = create_app(Settings.from_env())

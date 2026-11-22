@@ -592,13 +592,19 @@
   }
 
   async function verifyCredentials(apiUrl, apiKey) {
-    const info = await apiRequest("/api/auth/verify", { apiUrl, apiKey });
+    const cleanedKey = (apiKey || "").trim();
+    const info = await apiRequest("/api/auth/verify", { apiUrl, apiKey: cleanedKey });
     state.apiUrl = normalizeBaseUrl(apiUrl);
-    state.apiKey = apiKey.trim();
+    state.apiKey = cleanedKey;
     safeStorageSet(STORAGE_KEYS.apiUrl, state.apiUrl);
-    safeStorageSet(STORAGE_KEYS.apiKey, state.apiKey);
+    if (state.apiKey) {
+      safeStorageSet(STORAGE_KEYS.apiKey, state.apiKey);
+    } else {
+      safeStorageRemove(STORAGE_KEYS.apiKey);
+    }
+    els.disconnectBtn.hidden = !state.apiKey;
     updateServerMetadata(info);
-    setConnectionStatus("online", "Bağlı");
+    setConnectionStatus("online", "Hazır");
     return info;
   }
 
@@ -1027,6 +1033,7 @@
   els.openSettingsBtn.addEventListener("click", () => {
     els.settingsApiUrl.value = state.apiUrl;
     els.settingsApiKey.value = state.apiKey;
+    els.disconnectBtn.hidden = !state.apiKey;
     setBanner(els.settingsFeedback, "");
     syncThemeUI();
     els.settingsDialog.showModal();
@@ -1059,10 +1066,16 @@
     resetJobCard();
     safeStorageRemove(STORAGE_KEYS.apiKey);
     state.apiKey = "";
-    updateServerMetadata(null);
-    setConnectionStatus("locked", "Kilitli");
-    await closeTopLayer(els.settingsDialog);
-    showAuthScreen("API anahtarı bu cihazdan silindi.", "info");
+    els.settingsApiKey.value = "";
+    els.disconnectBtn.hidden = true;
+    if (state.serverInfo?.auth_required) {
+      updateServerMetadata(null);
+      setConnectionStatus("locked", "Kilitli");
+      await closeTopLayer(els.settingsDialog);
+      showAuthScreen("API anahtarı bu cihazdan silindi.", "info");
+    } else {
+      setBanner(els.settingsFeedback, "Kayıtlı API anahtarı temizlendi (sunucu şifresiz açık).", "info");
+    }
   });
 
   // ---------------------------------------------------------------------------
@@ -1081,19 +1094,18 @@
       }
     }
 
-    if (!state.apiKey) {
-      setConnectionStatus("locked", "Kilitli");
-      showAuthScreen();
-      return;
-    }
-
+    showAppScreen();
     try {
       setConnectionStatus("locked", "Bağlanıyor...");
       await verifyCredentials(state.apiUrl, state.apiKey);
       showAppScreen();
     } catch (err) {
-      setConnectionStatus("offline", "Bağlantı Yok");
-      showAuthScreen(err.message, "error");
+      if (err.status === 401) {
+        setConnectionStatus("offline", "Kilitli");
+        showAuthScreen("Bu sunucu API anahtarı gerektiriyor.", "info");
+      } else {
+        setConnectionStatus("offline", "Uyanıyor");
+      }
     }
   }
 

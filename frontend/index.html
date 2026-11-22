@@ -32,7 +32,7 @@
       <div class="topbar-actions">
         <div id="connection-pill" class="status-pill" data-state="locked" aria-live="polite">
           <span class="status-dot" aria-hidden="true"></span>
-          <span id="connection-pill-text">Kilitli</span>
+          <span id="connection-pill-text">Bağlanıyor...</span>
         </div>
         <button
           id="open-settings-btn"
@@ -51,7 +51,7 @@
 
     <main class="main-content">
       <!-- Auth / Lock View -->
-      <section id="auth-view" class="card auth-card" aria-labelledby="auth-heading">
+      <section id="auth-view" class="card auth-card" aria-labelledby="auth-heading" hidden>
         <div class="card-header">
           <div class="lock-badge" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -130,7 +130,7 @@
       </section>
 
       <!-- Main Downloader View -->
-      <div id="app-view" class="app-stack" hidden>
+      <div id="app-view" class="app-stack">
         <section class="card" aria-labelledby="downloader-heading">
           <div class="platform-strip" aria-label="Desteklenen platformlar">
             <span class="platform-chip" data-platform="youtube">YouTube</span>
@@ -348,15 +348,13 @@
         <div class="field">
           <label for="settings-api-key">Gizli API Anahtarı</label>
           <span id="settings-api-key-hint" class="hint">
-            Değiştirmek istemiyorsanız mevcut anahtarı bırakabilirsiniz.
+            Opsiyonel: Yalnızca sunucunuzda API anahtarı zorunluysa doldurun.
           </span>
           <div class="input-row">
             <input
               id="settings-api-key"
               name="apiKey"
               type="password"
-              required
-              minlength="8"
               autocomplete="current-password"
               aria-describedby="settings-api-key-hint"
               data-error="settings-api-key-error"
