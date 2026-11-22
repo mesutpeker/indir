@@ -71,7 +71,7 @@
           <div class="field">
             <label for="auth-api-url">Sunucu Adresi (API URL)</label>
             <span id="auth-api-url-hint" class="hint">
-              Örnek: https://api-indir.mesutpeker.com (yerel testte http://localhost:8000)
+              Varsayılan bulut sunucunuz: https://mesut-video-api.onrender.com
             </span>
             <input
               id="auth-api-url"
@@ -80,7 +80,7 @@
               required
               pattern="https?://.+"
               autocomplete="url"
-              placeholder="https://api-indir.mesutpeker.com"
+              placeholder="https://mesut-video-api.onrender.com"
               aria-describedby="auth-api-url-hint"
               data-error="auth-api-url-error"
             >
@@ -92,7 +92,7 @@
           <div class="field">
             <label for="auth-api-key">Gizli API Anahtarı</label>
             <span id="auth-api-key-hint" class="hint">
-              Sunucudaki backend/.env dosyasında tanımlı API_KEY değeri (yalnızca bu tarayıcıda saklanır).
+              Render panelinde Environment → API_KEY alanında görünen şifre (yalnızca bu tarayıcıda saklanır).
             </span>
             <div class="input-row">
               <input
@@ -328,7 +328,7 @@
         <div class="field">
           <label for="settings-api-url">Sunucu Adresi (API URL)</label>
           <span id="settings-api-url-hint" class="hint">
-            Cloudflare Tunnel adresiniz veya yerel sunucu adresiniz.
+            Bulut sunucu adresiniz (varsayılan: https://mesut-video-api.onrender.com).
           </span>
           <input
             id="settings-api-url"
