@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: mesut-video-api
+    runtime: docker
+    rootDir: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: frankfurt
+    healthCheckPath: /api/health
+    envVars:
+      - key: API_KEY
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: https://mesutpeker.com,https://indir.mesutpeker.com,https://mesutpeker.github.io
+      - key: FILE_TTL_SECONDS
+        value: "900"
+      - key: MAX_CONCURRENT_JOBS
+        value: "2"
+      - key: MAX_FILESIZE_MB
+        value: "512"

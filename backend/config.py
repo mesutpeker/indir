@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -114,6 +115,19 @@ class Settings:
             if not cookies_path.is_absolute():
                 cookies_path = (BASE_DIR / cookies_path).resolve()
             cookies_file = str(cookies_path)
+
+        if cookies_file is None:
+            cookies_b64 = os.environ.get("COOKIES_B64", "").strip()
+            if cookies_b64:
+                try:
+                    decoded_bytes = base64.b64decode(cookies_b64, validate=True)
+                    download_dir.mkdir(parents=True, exist_ok=True)
+                    decoded_path = download_dir / ".cookies.txt"
+                    decoded_path.write_bytes(decoded_bytes)
+                    decoded_path.chmod(0o600)
+                    cookies_file = str(decoded_path)
+                except Exception:
+                    pass
 
         cookies_from_browser = os.environ.get("COOKIES_FROM_BROWSER", "").strip() or None
         po_token_base_url = os.environ.get("PO_TOKEN_BASE_URL", "").strip() or None
